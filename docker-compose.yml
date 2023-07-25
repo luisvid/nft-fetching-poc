@@ -1,0 +1,65 @@
+version: '3.7'
+
+networks:
+  app-tier:
+    driver: bridge
+
+services:
+  mongodb:
+    image: mongo:latest
+    container_name: mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: nft1234
+      MONGO_INITDB_DATABASE: externalnft
+    ports:
+      - 27017:27017
+    volumes:
+      - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+    networks:
+      - app-tier
+  cache:
+    image: redis:latest
+    container_name: cache
+    restart: always
+    environment:
+      # ALLOW_EMPTY_PASSWORD is recommended only for development.
+      - ALLOW_EMPTY_PASSWORD=yes
+      - REDIS_DISABLE_COMMANDS=FLUSHDB,FLUSHALL
+    ports:
+      - '6379:6379'
+    volumes:
+      - 'redis_data:/bitnami/redis/data'
+    networks:
+      - app-tier
+  api:
+    image: external-nft-service:latest
+    restart: always
+    environment:
+      # Db conf
+      DB_DATABASE: externalnft
+      DB_HOST: mongodb
+      DB_PORT: 27017
+      DB_USER: uTester2
+      DB_PASSWORD: brocal
+      APPLICATION_URL: http://localhost:3000
+      # Redis conf
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      # api key
+      MORALISAPIKEY: 'tCRtxB8QaGSwSHM7ANeeIgtXiJatircxCrcYbgbbegxyU0uaTeZGxXaTX6dmM9ay'
+      OPENSEAAPIKEY: ''
+    ports:
+      - "3000:3000"
+    networks:
+      - app-tier
+    depends_on:
+      - mongodb
+      - cache
+    links:
+      - mongodb
+
+volumes:
+  redis_data:
+    driver: local
